@@ -173,14 +173,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._vertexChanged(latlng, false);
 	},
 
-	_generateArcError: function(latlng) {
-		this.options.drawError.message = 'Arc is too long!'
-		this._showErrorTooltip();
-		this.options.drawError.message = '<strong>Error:</strong> shape edges cannot cross!',
-		this._vertexChanged(latlng, false)
-		this._markerGroup.removeLayer(this._markers.pop());		
-	},
-
 	// @method addVertex(): void
 	// Add a vertex to the end of the polyline
 	addVertex: function (latlng) {
@@ -194,40 +186,24 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			this._hideErrorTooltip();
 		}
 
-		console.log(latlng)
-
 		this._markers.push(this._createMarker(latlng));
-		if (this._markers.length > 1){
-			// //console.log('inside addVertex');
-			var start = this._markers[ markersLength - 1 ].getLatLng();
-			var end = this._markers[ markersLength ].getLatLng()
-			var arcPoints = this._make_arc_points(start, end)
-			if (!arcPoints){
-				this._generateArcError(latlng)
-				return
-			}
-			arcPoints = this._getTransformedShape(arcPoints);
 
-			for(var j=1; j<arcPoints.length; j++){
-				arcPoint = arcPoints[j];
-				this._poly.addLatLng(arcPoint);
-			}
-		}
-		else{
-			this._poly.addLatLng(latlng);
-		}
+		this._poly.addLatLng(latlng);
+
 		if (this._poly.getLatLngs().length === 2) {
 			this._map.addLayer(this._poly);
 		}
+
 		this._vertexChanged(latlng, true);
 	},
 
 	// @method completeShape(): void
 	// Closes the polyline between the first and last points
 	completeShape: function () {
-		if (this._markers.length <= 1) {
+		if (this._markers.length <= 1 || !this._shapeIsValid()) {
 			return;
 		}
+
 		this._fireCreatedEvent();
 		this.disable();
 
@@ -610,136 +586,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 	},
 
 	_fireCreatedEvent: function () {
-		var markersLength = this._markers.length;
-		var start = this._markers[ markersLength - 1 ].getLatLng();
-        var end = this._markers[ 0 ].getLatLng()
-		var arcPoints = this._make_arc_points(start, end)
-		if (!arcPoints) {
-			this._generateArcError(end)
-			return
-		}
-		for(var j=1; j<arcPoints.length-1; j++){
-			arcPoint = arcPoints[j];
-			this._poly.addLatLng(arcPoint);
-		}
-		//console.log('inside _fireCreatedEvent()')
-		var polyLatLngs = this._poly.getLatLngs();
-		polyLatLngs = this._getTransformedShape(polyLatLngs);
-		var poly = new this.Poly(polyLatLngs, this.options.shapeOptions);
+		var poly = new this.Poly(this._poly.getLatLngs(), this.options.shapeOptions);
 		L.Draw.Feature.prototype._fireCreatedEvent.call(this, poly);
-	},
-
-	// Called to undo arc.js antimeridian transformations.
-	_getTransformedShape: function(arcPoints) {
-		var transformedArcPoints = [];
-		//console.log('inside _getTransformedShape');
-		var beforePts = arcPoints;
-		for (var j = 0; j < arcPoints.length; j++) {
-			var arcPoint = arcPoints[j]
-			//transformation if shape is outside latitude.
-			var lng = arcPoint.lng;
-			//crossing antimeridian transformation
-			if (lng > 360 && lng < 720) {
-			lng =  lng % 360 - 360;
-			}
-			else if (lng >= 720) {
-				lng =  lng % 360 + 360;
-				}
-			arcPoint.lng = lng;
-			transformedArcPoints.push(arcPoint);
-		}
-		return(transformedArcPoints);
-	},
-	_get_mid_point: function(start, end) {
-		var mid = {lat: 0, lng: 0}
-		var deltaLng = (end.lng - start.lng) * Math.PI/180
-		phi1 = start.lat * Math.PI/180
-		phi2 = end.lat * Math.PI/180
-		var Bx = Math.cos(phi2) * Math.cos(deltaLng)
-		var By = Math.cos(phi2) * Math.sin(deltaLng)
-		var numer = Math.sin(phi1) + Math.sin(phi2)
-		var denom = Math.sqrt( (Math.cos(phi1) + Bx) * (Math.cos(phi1) + Bx) + By*By )
-		mid.lat = Math.atan2(numer, denom) * 180 / Math.PI
-		lng = start.lng + ( Math.atan2(By, Math.cos(phi1) + Bx) ) * 180 / Math.PI
-		//wrap around other way
-		lng = Math.sign(-lng) * 180 + lng
-		if (lng < -180) {
-			lng = 180 + lng % 180;
-		}
-		else if (lng > 180) {
-			lng = -180 + lng % 180;
-			}
-		mid.lng = lng
-		console.log('mid point')
-		console.log(mid)
-		return(mid)
-	},
-
-	_make_arc_points: function(start, end) {
-		//console.log('inside _make_arc_points');
-		var deltaLng = end.lng - start.lng;
-		console.log(deltaLng)
-		if (Math.abs(deltaLng) >= 160 && stereoMap === false) {
-			alertify.notify("Arc too long, Try to click closer together.",
-							'error', 5, function(){  console.log('dismissed'); })
-			return
-		}
-		//calculate mid point and make segment based off of two separate segments.
-		mid = {lat: 0, lng: 0}
-		if (deltaLng >= 180 && stereoMap === false) {
-			mid = this._get_mid_point(start, end)
-			console.log('deltaLng is too large, breaking up')
-			var nVerticies = Math.round(Math.abs(deltaLng)/8)+1;
-			startToMid = L.Polyline.Arc([start.lat, start.lng],
-				[mid.lat, mid.lng],
-				{
-					vertices: nVerticies,
-					offset: 30
-				});
-				midToEnd = L.Polyline.Arc([mid.lat, mid.lng],
-				[end.lat, end.lng],
-				{
-					vertices: nVerticies,
-					offset: 30
-				});
-			var arcPoints = startToMid.getLatLngs();
-			arcPoints = arcPoints.concat(midToEnd.getLatLngs())
-			arcPoints = this._getTransformedShape(arcPoints);
-			return arcPoints
-		}
-		else if( (deltaLng <= -180 && stereoMap === false) ){
-			mid = this._get_mid_point(start, end)
-			console.log('deltaLng is too small, breaking up')
-			var nVerticies = Math.round(Math.abs(deltaLng)/8)+1;
-			startToMid = L.Polyline.Arc([start.lat, start.lng],
-				[mid.lat, mid.lng],
-				{
-					vertices: nVerticies,
-					offset: 30
-				});
-				midToEnd = L.Polyline.Arc([mid.lat, mid.lng],
-				[end.lat, end.lng],
-				{
-					vertices: nVerticies,
-					offset: 30
-				});
-			var arcPoints = startToMid.getLatLngs();
-			arcPoints = arcPoints.concat(midToEnd.getLatLngs())
-			arcPoints = this._getTransformedShape(arcPoints);
-			return arcPoints
-		}
-		else{
-			var nVerticies = Math.round(Math.abs(deltaLng)/8)+1;
-			var polyline = L.Polyline.Arc([start.lat, start.lng],
-											[end.lat, end.lng],
-											{
-												vertices: Math.round(nVerticies),
-												offset: 30
-											});
-
-			var arcPoints = polyline.getLatLngs();
-			arcPoints = this._getTransformedShape(arcPoints);
-			return arcPoints
-			}
 	}
 });

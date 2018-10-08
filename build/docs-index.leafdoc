@@ -23,6 +23,7 @@ This file just defines the order of the classes in the docs.
 @class L.EditToolbar.Edit
 @class L.EditToolbar.Delete
 
+@class L.Polyline.Arc
 @class L.GeometryUtil
 @class L.LatLngUtil
 @class L.LineUtil

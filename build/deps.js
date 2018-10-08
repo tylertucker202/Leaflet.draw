@@ -2,7 +2,7 @@ var deps = {
 	Core: {
 		src: [
 			'Leaflet.draw.js',
-			'Leaflet.Draw.Event.js'
+			'Leaflet.Draw.Event.js',
 		],
 		desc: 'The core of the plugin. Currently only includes the version.'
 	},
@@ -37,6 +37,8 @@ var deps = {
 
 	Extensions: {
 		src: [
+			'ext/arc.js',
+			'ext/leaflet-arc.js',
 			'ext/TouchEvents.js',
 			'ext/LatLngUtil.js',
 			'ext/GeometryUtil.js',

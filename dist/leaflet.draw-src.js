@@ -1,5 +1,5 @@
 /*
- Leaflet.draw 1.0.0+5d0cf5d, a plugin that adds drawing and editing tools to Leaflet powered maps.
+ Leaflet.draw 1.0.0+49ef5a5, a plugin that adds drawing and editing tools to Leaflet powered maps.
  (c) 2012-2017, Jacob Toye, Jon West, Smartrak, Leaflet
 
  https://github.com/Leaflet/Leaflet.draw
@@ -8,7 +8,7 @@
 (function (window, document, undefined) {/**
  * Leaflet.draw assumes that you have already included the Leaflet library.
  */
-L.drawVersion = "1.0.0+5d0cf5d";
+L.drawVersion = "1.0.0+49ef5a5";
 /**
  * @class L.Draw
  * @aka Draw
@@ -483,7 +483,6 @@ L.Draw.Feature = L.Handler.extend({
 
 
 
-
 /**
  * @class L.Draw.Polyline
  * @aka Draw.Polyline
@@ -491,7 +490,7 @@ L.Draw.Feature = L.Handler.extend({
  */
 L.Draw.Polyline = L.Draw.Feature.extend({
 	statics: {
-		TYPE: 'Polyline'
+		TYPE: 'polyline'
 	},
 
 	Poly: L.Polyline,
@@ -528,27 +527,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		zIndexOffset: 2000, // This should be > than the highest z-index any map layers
 		factor: 1, // To change distance calculation
 		maxPoints: 0 // Once this number of points are placed, finish shape
-	},
-
-	// @method initialize(): void
-	initialize: function (map, options) {
-		// if touch, switch to touch icon
-		if (L.Browser.touch) {
-			this.options.icon = this.options.touchIcon;
-		}
-
-		// Need to set this here to ensure the correct message is used.
-		this.options.drawError.message = L.drawLocal.draw.handlers.Polyline.error;
-
-		// Merge default drawError options with custom options
-		if (options && options.drawError) {
-			options.drawError = L.Util.extend({}, this.options.drawError, options.drawError);
-		}
-
-		// Save the type so super can fire, need to do this as cannot do this.TYPE :(
-		this.type = L.Draw.Polyline.TYPE;
-
-		L.Draw.Feature.prototype.initialize.call(this, map, options);
 	},
 
 	// @method addHooks(): void
@@ -667,6 +645,25 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._markerGroup.removeLayer(this._markers.pop());		
 	},
 
+	// @method _addArcPoints(): void
+	// add arc to the end of the polyline
+	_addArcPoints: function(){
+		var start = this._markers[ markersLength - 1 ].getLatLng();
+		var end = this._markers[ markersLength ].getLatLng()
+		var arcPoints = this._make_arc_points(start, end)
+		if (!arcPoints){
+			this._generateArcError(latlng)
+			return
+		}
+		arcPoints = this._getTransformedShape(arcPoints);
+	
+
+		for(var j=1; j<arcPoints.length; j++){
+			arcPoint = arcPoints[j];
+			this._poly.addLatLng(arcPoint);
+		}
+	},
+
 	// @method addVertex(): void
 	// Add a vertex to the end of the Polyline
 	addVertex: function (latlng) {
@@ -681,24 +678,14 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		}
 
 		this._markers.push(this._createMarker(latlng));
-		if (this._markers.length > 1){
-			var start = this._markers[ markersLength - 1 ].getLatLng();
-			var end = this._markers[ markersLength ].getLatLng()
-			var arcPoints = this._make_arc_points(start, end)
-			if (!arcPoints){
-				this._generateArcError(latlng)
-				return
-			}
-			arcPoints = this._getTransformedShape(arcPoints);
 
-			for(var j=1; j<arcPoints.length; j++){
-				arcPoint = arcPoints[j];
-				this._poly.addLatLng(arcPoint);
-			}
+		if (this._markers.length > 1){
+			this._addArcPoints()
 		}
 		else{
 			this._poly.addLatLng(latlng);
 		}
+
 		if (this._poly.getLatLngs().length === 2) {
 			this._map.addLayer(this._poly);
 		}
@@ -1133,11 +1120,9 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		return(transformedArcPoints);
 	},
 
-
 	_make_arc_points: function(start, end) {
 		var deltaLng = end.lng - start.lng;
-		var mapproj = window.location.href.split('?map=')[1]
-		if (Math.abs(deltaLng) >= 160 && mapproj === 'WM') {
+		if (Math.abs(deltaLng) >= 160) {
 			console.log("Arc too long, Try to click closer together.")
 			return
 		}

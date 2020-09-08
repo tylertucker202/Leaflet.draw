@@ -1,4 +1,3 @@
-
 /**
  * @class L.Draw.Polyline
  * @aka Draw.Polyline
@@ -6,7 +5,7 @@
  */
 L.Draw.Polyline = L.Draw.Feature.extend({
 	statics: {
-		TYPE: 'Polyline'
+		TYPE: 'polyline'
 	},
 
 	Poly: L.Polyline,
@@ -53,7 +52,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		}
 
 		// Need to set this here to ensure the correct message is used.
-		this.options.drawError.message = L.drawLocal.draw.handlers.Polyline.error;
+		this.options.drawError.message = L.drawLocal.draw.handlers.polyline.error;
 
 		// Merge default drawError options with custom options
 		if (options && options.drawError) {
@@ -152,7 +151,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 	},
 
 	// @method deleteLastVertex(): void
-	// Remove the last vertex from the Polyline, removes Polyline from map if only one point exists.
+	// Remove the last vertex from the polyline, removes polyline from map if only one point exists.
 	deleteLastVertex: function () {
 		if (this._markers.length <= 1) {
 			return;
@@ -174,16 +173,8 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._vertexChanged(latlng, false);
 	},
 
-	_generateArcError: function(latlng) {
-		this.options.drawError.message = 'Arc is too long!'
-		this._showErrorTooltip();
-		this.options.drawError.message = '<strong>Error:</strong> shape edges cannot cross!',
-		this._vertexChanged(latlng, false)
-		this._markerGroup.removeLayer(this._markers.pop());		
-	},
-
 	// @method addVertex(): void
-	// Add a vertex to the end of the Polyline
+	// Add a vertex to the end of the polyline
 	addVertex: function (latlng) {
 		var markersLength = this._markers.length;
 		// markersLength must be greater than or equal to 2 before intersections can occur
@@ -196,36 +187,23 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		}
 
 		this._markers.push(this._createMarker(latlng));
-		if (this._markers.length > 1){
-			var start = this._markers[ markersLength - 1 ].getLatLng();
-			var end = this._markers[ markersLength ].getLatLng()
-			var arcPoints = this._make_arc_points(start, end)
-			if (!arcPoints){
-				this._generateArcError(latlng)
-				return
-			}
-			arcPoints = this._getTransformedShape(arcPoints);
 
-			for(var j=1; j<arcPoints.length; j++){
-				arcPoint = arcPoints[j];
-				this._poly.addLatLng(arcPoint);
-			}
-		}
-		else{
-			this._poly.addLatLng(latlng);
-		}
+		this._poly.addLatLng(latlng);
+
 		if (this._poly.getLatLngs().length === 2) {
 			this._map.addLayer(this._poly);
 		}
+
 		this._vertexChanged(latlng, true);
 	},
 
 	// @method completeShape(): void
-	// Closes the Polyline between the first and last points
+	// Closes the polyline between the first and last points
 	completeShape: function () {
-		if (this._markers.length <= 1) {
+		if (this._markers.length <= 1 || !this._shapeIsValid()) {
 			return;
 		}
+
 		this._fireCreatedEvent();
 		this.disable();
 
@@ -388,12 +366,12 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 	_updateFinishHandler: function () {
 		var markerCount = this._markers.length;
-		// The last marker should have a click handler to close the Polyline
+		// The last marker should have a click handler to close the polyline
 		if (markerCount > 1) {
 			this._markers[markerCount - 1].on('click', this._finishShape, this);
 		}
 
-		// Remove the old marker click handler (as only the last point should close the Polyline)
+		// Remove the old marker click handler (as only the last point should close the polyline)
 		if (markerCount > 2) {
 			this._markers[markerCount - 2].off('click', this._finishShape, this);
 		}
@@ -494,19 +472,19 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			labelText, distanceStr;
 		if (this._markers.length === 0) {
 			labelText = {
-				text: L.drawLocal.draw.handlers.Polyline.tooltip.start
+				text: L.drawLocal.draw.handlers.polyline.tooltip.start
 			};
 		} else {
 			distanceStr = showLength ? this._getMeasurementString() : '';
 
 			if (this._markers.length === 1) {
 				labelText = {
-					text: L.drawLocal.draw.handlers.Polyline.tooltip.cont,
+					text: L.drawLocal.draw.handlers.polyline.tooltip.cont,
 					subtext: distanceStr
 				};
 			} else {
 				labelText = {
-					text: L.drawLocal.draw.handlers.Polyline.tooltip.end,
+					text: L.drawLocal.draw.handlers.polyline.tooltip.end,
 					subtext: distanceStr
 				};
 			}
@@ -606,68 +584,9 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			this._markers[this._markers.length - 1].off('click', this._finishShape, this);
 		}
 	},
-     // Used to complete Polyline
+
 	_fireCreatedEvent: function () {
-		var markersLength = this._markers.length;
-		var start = this._markers[ markersLength - 1 ].getLatLng();
-        var end = this._markers[ 0 ].getLatLng()
-		var arcPoints = this._make_arc_points(start, end)
-		if (!arcPoints) {
-			this._generateArcError(end)
-			console.log('ending segment too long.')
-			return
-		}
-		for(var j=1; j<arcPoints.length-1; j++){
-			arcPoint = arcPoints[j];
-			this._poly.addLatLng(arcPoint);
-		}
-		var polyLatLngs = this._poly.getLatLngs();
-		polyLatLngs = this._getTransformedShape(polyLatLngs);
-		var poly = new this.Poly(polyLatLngs, this.options.shapeOptions);
+		var poly = new this.Poly(this._poly.getLatLngs(), this.options.shapeOptions);
 		L.Draw.Feature.prototype._fireCreatedEvent.call(this, poly);
-	},
-
-	// Called to undo arc.js antimeridian transformations.
-	_getTransformedShape: function(arcPoints) {
-		var transformedArcPoints = [];
-		var beforePts = arcPoints;
-		for (var j = 0; j < arcPoints.length; j++) {
-			var arcPoint = arcPoints[j]
-			//transformation if shape is outside latitude.
-			var lng = arcPoint.lng;
-			//crossing antimeridian transformation
-			if (lng > 360 && lng < 720) {
-			lng =  lng % 360 - 360;
-			}
-			else if (lng >= 720) {
-				lng =  lng % 360 + 360;
-				}
-			arcPoint.lng = lng;
-			transformedArcPoints.push(arcPoint);
-		}
-		return(transformedArcPoints);
-	},
-
-
-	_make_arc_points: function(start, end) {
-		var deltaLng = end.lng - start.lng;
-		var mapproj = window.location.href.split('?map=')[1]
-		if (Math.abs(deltaLng) >= 160 && mapproj === 'WM') {
-			console.log("Arc too long, Try to click closer together.")
-			return
-		}
-		else{
-			var nVerticies = Math.round(Math.abs(deltaLng)/8)+1;
-			var Polyline = L.Polyline.Arc([start.lat, start.lng],
-											[end.lat, end.lng],
-											{
-												vertices: Math.round(nVerticies),
-												offset: 30
-											});
-
-			var arcPoints = Polyline.getLatLngs();
-			arcPoints = this._getTransformedShape(arcPoints);
-			return arcPoints
-			}
 	}
 });

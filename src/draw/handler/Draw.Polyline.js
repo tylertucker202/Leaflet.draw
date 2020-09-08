@@ -163,6 +163,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 	// @method _addArcPoints(): void
 	// add arc to the end of the polyline
 	_addArcPoints: function(){
+		var markersLength = this._markers.length;
 		var start = this._markers[ markersLength - 1 ].getLatLng();
 		var end = this._markers[ markersLength ].getLatLng()
 		var arcPoints = this._make_arc_points(start, end)

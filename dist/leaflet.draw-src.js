@@ -1,5 +1,5 @@
 /*
- Leaflet.draw 1.0.0+49ef5a5, a plugin that adds drawing and editing tools to Leaflet powered maps.
+ Leaflet.draw 1.0.0+b64f75a, a plugin that adds drawing and editing tools to Leaflet powered maps.
  (c) 2012-2017, Jacob Toye, Jon West, Smartrak, Leaflet
 
  https://github.com/Leaflet/Leaflet.draw
@@ -8,7 +8,7 @@
 (function (window, document, undefined) {/**
  * Leaflet.draw assumes that you have already included the Leaflet library.
  */
-L.drawVersion = "1.0.0+49ef5a5";
+L.drawVersion = "1.0.0+b64f75a";
 /**
  * @class L.Draw
  * @aka Draw
@@ -648,6 +648,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 	// @method _addArcPoints(): void
 	// add arc to the end of the polyline
 	_addArcPoints: function(){
+		var markersLength = this._markers.length;
 		var start = this._markers[ markersLength - 1 ].getLatLng();
 		var end = this._markers[ markersLength ].getLatLng()
 		var arcPoints = this._make_arc_points(start, end)

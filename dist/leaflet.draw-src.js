@@ -1,5 +1,5 @@
 /*
- Leaflet.draw 1.0.0+b64f75a, a plugin that adds drawing and editing tools to Leaflet powered maps.
+ Leaflet.draw 1.0.0+30df791, a plugin that adds drawing and editing tools to Leaflet powered maps.
  (c) 2012-2017, Jacob Toye, Jon West, Smartrak, Leaflet
 
  https://github.com/Leaflet/Leaflet.draw
@@ -8,7 +8,7 @@
 (function (window, document, undefined) {/**
  * Leaflet.draw assumes that you have already included the Leaflet library.
  */
-L.drawVersion = "1.0.0+b64f75a";
+L.drawVersion = "1.0.0+30df791";
 /**
  * @class L.Draw
  * @aka Draw
@@ -645,26 +645,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._markerGroup.removeLayer(this._markers.pop());		
 	},
 
-	// @method _addArcPoints(): void
-	// add arc to the end of the polyline
-	_addArcPoints: function(){
-		var markersLength = this._markers.length;
-		var start = this._markers[ markersLength - 1 ].getLatLng();
-		var end = this._markers[ markersLength ].getLatLng()
-		var arcPoints = this._make_arc_points(start, end)
-		if (!arcPoints){
-			this._generateArcError(latlng)
-			return
-		}
-		arcPoints = this._getTransformedShape(arcPoints);
-	
-
-		for(var j=1; j<arcPoints.length; j++){
-			arcPoint = arcPoints[j];
-			this._poly.addLatLng(arcPoint);
-		}
-	},
-
 	// @method addVertex(): void
 	// Add a vertex to the end of the Polyline
 	addVertex: function (latlng) {
@@ -681,7 +661,20 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._markers.push(this._createMarker(latlng));
 
 		if (this._markers.length > 1){
-			this._addArcPoints()
+			var start = this._markers[ markersLength - 1 ].getLatLng();
+			var end = this._markers[ markersLength ].getLatLng()
+			var arcPoints = this._make_arc_points(start, end)
+			if (!arcPoints){
+				this._generateArcError(latlng)
+				return
+			}
+			arcPoints = this._getTransformedShape(arcPoints);
+		
+	
+			for(var j=1; j<arcPoints.length; j++){
+				arcPoint = arcPoints[j];
+				this._poly.addLatLng(arcPoint);
+			}
 		}
 		else{
 			this._poly.addLatLng(latlng);

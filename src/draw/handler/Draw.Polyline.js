@@ -160,26 +160,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._markerGroup.removeLayer(this._markers.pop());		
 	},
 
-	// @method _addArcPoints(): void
-	// add arc to the end of the polyline
-	_addArcPoints: function(){
-		var markersLength = this._markers.length;
-		var start = this._markers[ markersLength - 1 ].getLatLng();
-		var end = this._markers[ markersLength ].getLatLng()
-		var arcPoints = this._make_arc_points(start, end)
-		if (!arcPoints){
-			this._generateArcError(latlng)
-			return
-		}
-		arcPoints = this._getTransformedShape(arcPoints);
-	
-
-		for(var j=1; j<arcPoints.length; j++){
-			arcPoint = arcPoints[j];
-			this._poly.addLatLng(arcPoint);
-		}
-	},
-
 	// @method addVertex(): void
 	// Add a vertex to the end of the Polyline
 	addVertex: function (latlng) {
@@ -196,7 +176,20 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._markers.push(this._createMarker(latlng));
 
 		if (this._markers.length > 1){
-			this._addArcPoints()
+			var start = this._markers[ markersLength - 1 ].getLatLng();
+			var end = this._markers[ markersLength ].getLatLng()
+			var arcPoints = this._make_arc_points(start, end)
+			if (!arcPoints){
+				this._generateArcError(latlng)
+				return
+			}
+			arcPoints = this._getTransformedShape(arcPoints);
+		
+	
+			for(var j=1; j<arcPoints.length; j++){
+				arcPoint = arcPoints[j];
+				this._poly.addLatLng(arcPoint);
+			}
 		}
 		else{
 			this._poly.addLatLng(latlng);
